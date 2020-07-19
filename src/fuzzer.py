@@ -95,3 +95,17 @@ class LimitFuzzer(LimitFuzzerR):
 
     def fuzz(self, key='<start>', max_depth=10):
         return self.tree_to_str(self.gen_key(key=key, max_depth=max_depth))
+EXPR_GRAMMAR = {'<start>': [['<expr>']],
+ '<expr>': [['<term>', ' + ', '<expr>'],
+  ['<term>', ' - ', '<expr>'],
+  ['<term>']],
+ '<term>': [['<factor>', ' * ', '<term>'],
+  ['<factor>', ' / ', '<term>'],
+  ['<factor>']],
+ '<factor>': [['+', '<factor>'],
+  ['-', '<factor>'],
+  ['(', '<expr>', ')'],
+  ['<integer>', '.', '<integer>'],
+  ['<integer>']],
+ '<integer>': [['<digit>', '<integer>'], ['<digit>']],
+ '<digit>': [['0'], ['1'], ['2'], ['3'], ['4'], ['5'], ['6'], ['7'], ['8'], ['9']]}
