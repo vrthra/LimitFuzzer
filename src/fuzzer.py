@@ -57,8 +57,7 @@ class LimitFuzzer_R(Fuzzer):
             for rule in grammar[k]:
                 cost[k][str(rule)] = self.expansion_cost(grammar, rule, set())
         return cost
-        
- FUZZRANGE = 10
+
 class LimitFuzzer(LimitFuzzerR):
     def nonterminals(self, rule):
         return [t for t in rule if self.is_nt(t)]
