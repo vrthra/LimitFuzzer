@@ -1,3 +1,4 @@
+import random
 class Fuzzer:
     def __init__(self, grammar):
         self.grammar = grammar
@@ -12,7 +13,8 @@ class LimitFuzzer_R(Fuzzer):
     def tree_to_str(self, tree):
         name, children = tree
         if not self.is_nt(name): return name
-        return ''.join([tree_to_str(c) for c in children])
+        return ''.join([self.tree_to_str(c) for c in children])
+
     def symbol_cost(self, grammar, symbol, seen):
         if symbol in self.key_cost: return self.key_cost[symbol]
         if symbol in seen:
@@ -28,7 +30,7 @@ class LimitFuzzer_R(Fuzzer):
                     for token in tokens if token in grammar), default=0) + 1
 
     def gen_key(self, key, depth, max_depth):
-        if key not in self.grammar: return key
+        if key not in self.grammar: return (key, [])
         if depth > max_depth:
             assert key in self.cost
             clst = sorted([(self.cost[key][str(rule)], rule) for rule in self.grammar[key]])
@@ -37,13 +39,13 @@ class LimitFuzzer_R(Fuzzer):
             rules = self.grammar[key]
         if not rules:
             raise Exception('Empty key: %s' % key)
-        return self.gen_rule(random.choice(rules), depth+1, max_depth)
+        return (key, self.gen_rule(random.choice(rules), depth+1, max_depth))
 
     def gen_rule(self, rule, depth, max_depth):
-        return ''.join(self.gen_key(token, depth, max_depth) for token in rule)
+        return [self.gen_key(token, depth, max_depth) for token in rule]
 
     def fuzz(self, key='<start>', max_depth=10):
-        return self.gen_key(key=key, depth=0, max_depth=max_depth)
+        return self.tree_to_str(self.gen_key(key=key, depth=0, max_depth=max_depth))
 
     def __init__(self, grammar):
         super().__init__(grammar)
@@ -58,7 +60,7 @@ class LimitFuzzer_R(Fuzzer):
                 cost[k][str(rule)] = self.expansion_cost(grammar, rule, set())
         return cost
 
-class LimitFuzzer(LimitFuzzerR):
+class LimitFuzzer(LimitFuzzer_R):
     def nonterminals(self, rule):
         return [t for t in rule if self.is_nt(t)]
 
@@ -95,17 +97,24 @@ class LimitFuzzer(LimitFuzzerR):
 
     def fuzz(self, key='<start>', max_depth=10):
         return self.tree_to_str(self.gen_key(key=key, max_depth=max_depth))
-EXPR_GRAMMAR = {'<start>': [['<expr>']],
- '<expr>': [['<term>', ' + ', '<expr>'],
-  ['<term>', ' - ', '<expr>'],
-  ['<term>']],
- '<term>': [['<factor>', ' * ', '<term>'],
-  ['<factor>', ' / ', '<term>'],
-  ['<factor>']],
- '<factor>': [['+', '<factor>'],
-  ['-', '<factor>'],
-  ['(', '<expr>', ')'],
-  ['<integer>', '.', '<integer>'],
-  ['<integer>']],
- '<integer>': [['<digit>', '<integer>'], ['<digit>']],
- '<digit>': [['0'], ['1'], ['2'], ['3'], ['4'], ['5'], ['6'], ['7'], ['8'], ['9']]}
+if __name__ == '__main__':
+    EXPR_GRAMMAR = {'<start>': [['<expr>']],
+     '<expr>': [['<term>', ' + ', '<expr>'],
+      ['<term>', ' - ', '<expr>'],
+      ['<term>']],
+     '<term>': [['<factor>', ' * ', '<term>'],
+      ['<factor>', ' / ', '<term>'],
+      ['<factor>']],
+     '<factor>': [['+', '<factor>'],
+      ['-', '<factor>'],
+      ['(', '<expr>', ')'],
+      ['<integer>', '.', '<integer>'],
+      ['<integer>']],
+     '<integer>': [['<digit>', '<integer>'], ['<digit>']],
+     '<digit>': [['0'], ['1'], ['2'], ['3'], ['4'], ['5'], ['6'], ['7'], ['8'], ['9']]}
+
+    f = LimitFuzzer_R(EXPR_GRAMMAR)
+    print(f.fuzz('<start>'))
+
+    f = LimitFuzzer(EXPR_GRAMMAR)
+    print(f.fuzz('<start>'))
